@@ -1,0 +1,296 @@
+{
+  "info": {
+    "name": "ReceiptVault",
+    "description": "Tests every ReceiptVault function. Auth flow: Register -> Login (saves access_token) -> call protected endpoints. Set the collection variables `base_url`, `auth_url`, `anon_key`, then run Register and Login first.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:54321/functions/v1",
+      "type": "string"
+    },
+    {
+      "key": "auth_url",
+      "value": "http://localhost:54321/auth/v1",
+      "type": "string"
+    },
+    {
+      "key": "anon_key",
+      "value": "REPLACE_WITH_ANON_KEY",
+      "type": "string"
+    },
+    { "key": "webhook_secret", "value": "local-dev-secret", "type": "string" },
+    { "key": "access_token", "value": "", "type": "string" },
+    { "key": "user_id", "value": "", "type": "string" },
+    { "key": "email", "value": "demo@example.com", "type": "string" },
+    { "key": "password", "value": "password123", "type": "string" },
+    { "key": "expense_id", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.user && b.user.id) pm.collectionVariables.set('user_id', b.user.id);",
+                  "if (b.access_token) pm.collectionVariables.set('access_token', b.access_token);",
+                  "pm.test('signup ok', () => pm.expect([200,201]).to.include(pm.response.code));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "apikey", "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": { "raw": "{{auth_url}}/signup", "host": ["{{auth_url}}"], "path": ["signup"] }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.access_token) pm.collectionVariables.set('access_token', b.access_token);",
+                  "if (b.user && b.user.id) pm.collectionVariables.set('user_id', b.user.id);",
+                  "pm.test('login ok', () => pm.response.to.have.status(200));",
+                  "pm.test('token saved', () => pm.expect(pm.collectionVariables.get('access_token')).to.be.a('string').and.not.empty);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "apikey", "value": "{{anon_key}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{auth_url}}/token?grant_type=password",
+              "host": ["{{auth_url}}"],
+              "path": ["token"],
+              "query": [{ "key": "grant_type", "value": "password" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "expenses-api",
+      "item": [
+        {
+          "name": "Create expense (POST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const b = pm.response.json();",
+                  "if (b.expense && b.expense.id) pm.collectionVariables.set('expense_id', b.expense.id);",
+                  "pm.test('created', () => pm.response.to.have.status(201));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 42.50,\n  \"category\": \"groceries\",\n  \"description\": \"Weekly shop\",\n  \"spent_at\": \"2026-06-01\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/expenses-api", "host": ["{{base_url}}"], "path": ["expenses-api"] }
+          }
+        },
+        {
+          "name": "List expenses (GET)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/expenses-api?month=2026-06",
+              "host": ["{{base_url}}"],
+              "path": ["expenses-api"],
+              "query": [{ "key": "month", "value": "2026-06" }]
+            }
+          }
+        },
+        {
+          "name": "Update expense (PUT)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 55.00,\n  \"description\": \"Updated\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/expenses-api?id={{expense_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["expenses-api"],
+              "query": [{ "key": "id", "value": "{{expense_id}}" }]
+            }
+          }
+        },
+        {
+          "name": "Delete expense (DELETE)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/expenses-api?id={{expense_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["expenses-api"],
+              "query": [{ "key": "id", "value": "{{expense_id}}" }]
+            }
+          }
+        },
+        {
+          "name": "Unauthorized (expect 401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('rejects no token', () => pm.response.to.have.status(401));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{base_url}}/expenses-api", "host": ["{{base_url}}"], "path": ["expenses-api"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "upload-url (POST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{access_token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"file_name\": \"receipt.jpg\",\n  \"expense_id\": \"{{expense_id}}\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/upload-url", "host": ["{{base_url}}"], "path": ["upload-url"] }
+      }
+    },
+    {
+      "name": "reports-api (GET)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+        "url": {
+          "raw": "{{base_url}}/reports-api?month=2026-06",
+          "host": ["{{base_url}}"],
+          "path": ["reports-api"],
+          "query": [{ "key": "month", "value": "2026-06" }]
+        }
+      }
+    },
+    {
+      "name": "Event functions (shared-secret)",
+      "item": [
+        {
+          "name": "on-user-created",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-webhook-secret", "value": "{{webhook_secret}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"record\": { \"id\": \"{{user_id}}\", \"email\": \"{{email}}\" }\n}"
+            },
+            "url": { "raw": "{{base_url}}/on-user-created", "host": ["{{base_url}}"], "path": ["on-user-created"] }
+          }
+        },
+        {
+          "name": "on-expense-change",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-webhook-secret", "value": "{{webhook_secret}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"INSERT\",\n  \"table\": \"expenses\",\n  \"record\": { \"id\": \"{{expense_id}}\", \"user_id\": \"{{user_id}}\", \"amount\": 42.5, \"spent_at\": \"2026-06-01\" }\n}"
+            },
+            "url": { "raw": "{{base_url}}/on-expense-change", "host": ["{{base_url}}"], "path": ["on-expense-change"] }
+          }
+        },
+        {
+          "name": "on-receipt-uploaded",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-webhook-secret", "value": "{{webhook_secret}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"INSERT\",\n  \"record\": { \"name\": \"{{user_id}}/exp_{{expense_id}}/receipt.jpg\", \"bucket_id\": \"receipts\", \"owner\": \"{{user_id}}\", \"metadata\": { \"mimetype\": \"image/jpeg\", \"size\": 12345 } }\n}"
+            },
+            "url": { "raw": "{{base_url}}/on-receipt-uploaded", "host": ["{{base_url}}"], "path": ["on-receipt-uploaded"] }
+          }
+        },
+        {
+          "name": "notification-worker",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "x-webhook-secret", "value": "{{webhook_secret}}" }],
+            "url": { "raw": "{{base_url}}/notification-worker", "host": ["{{base_url}}"], "path": ["notification-worker"] }
+          }
+        },
+        {
+          "name": "daily-cleanup",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "x-webhook-secret", "value": "{{webhook_secret}}" }],
+            "url": { "raw": "{{base_url}}/daily-cleanup", "host": ["{{base_url}}"], "path": ["daily-cleanup"] }
+          }
+        },
+        {
+          "name": "monthly-digest",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "x-webhook-secret", "value": "{{webhook_secret}}" }],
+            "url": { "raw": "{{base_url}}/monthly-digest", "host": ["{{base_url}}"], "path": ["monthly-digest"] }
+          }
+        }
+      ]
+    }
+  ]
+}

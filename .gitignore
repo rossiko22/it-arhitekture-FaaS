@@ -1,0 +1,25 @@
+README.md
+INSTRUCTIONS.md
+# dependencies
+node_modules/
+frontend/node_modules/
+
+# build output
+frontend/dist/
+*.tsbuildinfo
+
+# env / secrets
+.env
+.env.*
+!.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# supabase local
+supabase/.temp/
+supabase/.branches/
+
+# misc
+.DS_Store
+*.log

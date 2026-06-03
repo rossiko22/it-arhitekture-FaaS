@@ -1,0 +1,70 @@
+# Supabase project configuration for ReceiptVault.
+# Docs: https://supabase.com/docs/guides/cli/config
+project_id = "receiptvault"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1:54321"
+
+[storage]
+enabled = true
+# 5 MiB upload limit – receipts are images.
+file_size_limit = "5MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+# For local dev keep confirmations off so signup → session works in one step.
+enable_confirmations = false
+
+# ----------------------------------------------------------------------------
+# Edge Functions
+# HTTP APIs verify the JWT (default). Event-driven functions are called by
+# Supabase itself (webhooks / cron / queue), so they disable JWT verification
+# and validate a shared-secret header instead.
+# ----------------------------------------------------------------------------
+[functions.expenses-api]
+verify_jwt = true
+
+[functions.upload-url]
+verify_jwt = true
+
+[functions.reports-api]
+verify_jwt = true
+
+[functions.on-user-created]
+verify_jwt = false
+
+[functions.on-expense-change]
+verify_jwt = false
+
+[functions.on-receipt-uploaded]
+verify_jwt = false
+
+[functions.notification-worker]
+verify_jwt = false
+
+[functions.daily-cleanup]
+verify_jwt = false
+
+[functions.monthly-digest]
+verify_jwt = false
