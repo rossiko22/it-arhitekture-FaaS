@@ -22,7 +22,8 @@
 -- Integrations → Cron and skip this file.
 -- ============================================================================
 
-create extension if not exists pg_cron with schema extensions;
+-- pg_cron is non-relocatable; it installs into its own fixed `cron` schema.
+create extension if not exists pg_cron;
 
 -- Helper: POST to an Edge Function with the shared secret header.
 create or replace function public.invoke_edge_function(fn text, body jsonb default '{}'::jsonb)

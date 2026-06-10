@@ -7,9 +7,12 @@
 -- ============================================================================
 
 -- Extensions ----------------------------------------------------------------
+-- pgcrypto lives in the shared `extensions` schema (pre-installed on Supabase).
 create extension if not exists pgcrypto with schema extensions;      -- gen_random_uuid()
-create extension if not exists pg_net   with schema extensions;      -- HTTP calls from SQL (cron → functions)
-create extension if not exists pgmq      with schema pgmq;           -- message queue
+-- pg_net and pgmq are non-relocatable: they install into their own fixed
+-- schemas (`net` and `pgmq`), so no `with schema` clause is allowed.
+create extension if not exists pg_net;                               -- net.http_post (cron → functions)
+create extension if not exists pgmq;                                 -- pgmq.* message queue
 
 -- ----------------------------------------------------------------------------
 -- profiles: one row per auth user (created by the on-user-created function)
